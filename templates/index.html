@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Parse Tree to AST Generator</title>
+
+    <style>
+        :root {
+            --bg: #f4f7fb;
+            --card: #ffffff;
+            --primary: #4f46e5;
+            --primary-light: #eef2ff;
+            --text: #172033;
+            --muted: #687386;
+            --border: #e3e8f1;
+            --green: #15803d;
+            --red: #dc2626;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        header {
+            padding: 30px 6%;
+            background: linear-gradient(120deg, #312e81, #4f46e5);
+            color: white;
+        }
+
+        header h1 {
+            margin: 0 0 10px;
+            font-size: clamp(25px, 4vw, 36px);
+        }
+
+        header p {
+            margin: 0;
+            color: #e0e7ff;
+            line-height: 1.6;
+        }
+
+        main {
+            max-width: 1450px;
+            margin: 28px auto;
+            padding: 0 22px;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 23px;
+            margin-bottom: 22px;
+            box-shadow: 0 5px 20px rgba(30, 41, 59, 0.04);
+        }
+
+        .section-title {
+            margin: 0 0 8px;
+            font-size: 21px;
+        }
+
+        .muted {
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        textarea {
+            display: block;
+            width: 100%;
+            min-height: 90px;
+            resize: vertical;
+            padding: 15px;
+            margin-top: 16px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            font-family: Consolas, monospace;
+            font-size: 17px;
+            outline: none;
+        }
+
+        textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px #4f46e51c;
+        }
+
+        button {
+            border: none;
+            border-radius: 9px;
+            padding: 11px 16px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.88;
+            transform: translateY(-1px);
+        }
+
+        button:focus-visible {
+            outline: 3px solid #a5b4fc;
+            outline-offset: 2px;
+        }
+
+        button:disabled {
+            opacity: 0.65;
+            cursor: wait;
+            transform: none;
+        }
+
+        .actions button {
+            min-height: 42px;
+        }
+
+        @media (max-width: 560px) {
+            header {
+                padding: 24px 5%;
+            }
+
+            main {
+                margin: 18px auto;
+                padding: 0 12px;
+            }
+
+            .card {
+                padding: 16px;
+                border-radius: 12px;
+            }
+
+            textarea {
+                font-size: 15px;
+            }
+
+            .tree-container {
+                padding: 14px 8px;
+            }
+
+            .node {
+                padding: 7px 9px;
+                font-size: 12px;
+            }
+
+            .ascii-box {
+                font-size: 12px;
+            }
+        }
+
+        .primary-btn {
+            background: var(--primary);
+            color: white;
+        }
+
+        .secondary-btn {
+            background: var(--primary-light);
+            color: #3730a3;
+        }
+
+        .actions,
+        .examples {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .examples button {
+            font-family: Consolas, monospace;
+            font-size: 13px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 16px;
+            margin-bottom: 22px;
+        }
+
+        .stat {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 13px;
+            padding: 20px;
+        }
+
+        .stat span {
+            display: block;
+            color: var(--muted);
+            font-size: 13px;
+            margin-bottom: 9px;
+        }
+
+        .stat strong {
+            font-size: 26px;
+        }
+
+        .tree-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 22px;
+            align-items: stretch;
+        }
+
+        .tree-panel {
+            min-width: 0;
+        }
+
+        .tree-heading {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .badge {
+            background: var(--primary-light);
+            color: #4338ca;
+            border-radius: 20px;
+            padding: 6px 10px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .tree-container {
+            min-height: 300px;
+            max-height: 600px;
+            overflow: auto;
+            border: 1px solid var(--border);
+            background: #fbfcff;
+            border-radius: 12px;
+            padding: 22px 14px;
+        }
+
+        .tree {
+            display: flex;
+            justify-content: center;
+            min-width: max-content;
+            padding: 8px 10px;
+        }
+
+        .tree ul {
+            display: flex;
+            position: relative;
+            justify-content: center;
+            padding: 24px 0 0;
+            margin: 0;
+        }
+
+        .tree li {
+            list-style: none;
+            position: relative;
+            text-align: center;
+            padding: 22px 5px 0;
+        }
+
+        .tree li::before,
+        .tree li::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 50%;
+            width: 50%;
+            height: 22px;
+            border-top: 1px solid #b7c1d4;
+        }
+
+        .tree li::after {
+            right: auto;
+            left: 50%;
+            border-left: 1px solid #b7c1d4;
+        }
+
+        .tree li:only-child::before,
+        .tree li:only-child::after {
+            display: none;
+        }
+
+        .tree li:first-child::before,
+        .tree li:last-child::after {
+            border: 0;
+        }
+
+        .tree li:last-child::before {
+            border-right: 1px solid #b7c1d4;
+            border-radius: 0 6px 0 0;
+        }
+
+        .tree li:first-child::after {
+            border-radius: 6px 0 0 0;
+        }
+
+        .tree ul ul::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 50%;
+            height: 24px;
+            border-left: 1px solid #b7c1d4;
+        }
+
+        .node {
+            display: inline-block;
+            background: white;
+            color: #273449;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 9px 12px;
+            font-size: 13px;
+            font-family: Consolas, monospace;
+            white-space: nowrap;
+            box-shadow: 0 2px 5px #0f172a0a;
+        }
+
+        .parse-node {
+            background: #f1f5f9;
+        }
+
+        .ast-node {
+            background: #eef2ff;
+            border-color: #a5b4fc;
+            color: #3730a3;
+        }
+
+        .leaf-node {
+            background: #ecfdf5;
+            border-color: #86efac;
+            color: #166534;
+        }
+
+        .empty {
+            color: var(--muted);
+            text-align: center;
+            padding: 85px 15px;
+            line-height: 1.7;
+        }
+
+        .token-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 9px;
+            margin-top: 14px;
+        }
+
+        .token {
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 7px;
+            padding: 8px 11px;
+            font-family: Consolas, monospace;
+            font-size: 13px;
+        }
+
+        .token small {
+            color: var(--muted);
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .message {
+            display: none;
+            padding: 13px 15px;
+            border-radius: 9px;
+            margin-top: 15px;
+            line-height: 1.5;
+        }
+
+        .error {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .success {
+            background: #f0fdf4;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .grammar {
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 15px;
+            font-family: Consolas, monospace;
+            line-height: 1.9;
+            overflow-x: auto;
+        }
+
+        /* ASCII tree output */
+        .ascii-box {
+            background: #0f172a;
+            color: #e2e8f0;
+            border-radius: 10px;
+            padding: 16px;
+            margin: 0;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 15px;
+            line-height: 1.5;
+            white-space: pre;
+            overflow: auto;
+            min-height: 120px;
+            max-height: 420px;
+        }
+
+        .ascii-title {
+            margin: 18px 0 10px;
+            font-size: 16px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 25px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        @media (max-width: 900px) {
+            .tree-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+
+            .tree-container {
+                min-height: 230px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>Parse Tree to AST Generator</h1>
+        <p>
+            Compiler Design Project · Lexical Analysis · Syntax Analysis ·
+            Abstract Syntax Tree
+        </p>
+    </header>
+
+    <main>
+
+        <section class="card">
+            <h2 class="section-title">Expression Analyzer</h2>
+
+            <p class="muted">
+                Enter an arithmetic expression or an assignment statement to generate its parse tree
+                and abstract syntax tree. Example: x = a + b * 5;
+            </p>
+
+            <textarea id="expression" aria-label="Mathematical expression" placeholder="Example: x = a + b * 5;"
+                spellcheck="false">x = a + b * 5;</textarea>
+
+            <div class="actions">
+                <button class="primary-btn" onclick="generateTrees()">
+                    Generate Trees
+                </button>
+
+                <button class="secondary-btn" onclick="clearAll()">
+                    Clear
+                </button>
+            </div>
+
+            <h3>Try an example</h3>
+
+            <div class="examples">
+                <button class="secondary-btn" onclick="setExample('x = a + b * 5;')">
+                    x = a + b * 5;
+                </button>
+
+                <button class="secondary-btn" onclick="setExample('x = (a + b) * c;')">
+                    (a + b) * c
+                </button>
+
+                <button class="secondary-btn" onclick="setExample('x = x / y - z;')">
+                    x / y - z
+                </button>
+
+                <button class="secondary-btn" onclick="setExample('result = 10 + 20 * 3;')">
+                    10 + 20 * 3
+                </button>
+
+                <button class="secondary-btn" onclick="setExample('x = -a + b;')">
+                    -a + b
+                </button>
+            </div>
+
+            <div id="message" class="message" role="status"></div>
+        </section>
+
+        <section class="stats">
+            <div class="stat">
+                <span>Tokens Identified</span>
+                <strong id="tokenCount">—</strong>
+            </div>
+
+            <div class="stat">
+                <span>Parse Tree Nodes</span>
+                <strong id="parseCount">—</strong>
+            </div>
+
+            <div class="stat">
+                <span>AST Nodes</span>
+                <strong id="astCount">—</strong>
+            </div>
+        </section>
+
+        <section class="tree-grid">
+
+            <div class="card tree-panel">
+                <div class="tree-heading">
+                    <h2 class="section-title">Parse Tree</h2>
+                    <span class="badge">Full Grammar</span>
+                </div>
+
+                <p class="muted">
+                    Includes grammar symbols, operators, operands,
+                    and parentheses.
+                </p>
+
+                <div class="tree-container" id="parseTree">
+                    <div class="empty">
+                        Your parse tree will appear here.<br>
+                        Enter an expression and click Generate Trees.
+                    </div>
+                </div>
+            </div>
+
+            <div class="card tree-panel">
+                <div class="tree-heading">
+                    <h2 class="section-title">Abstract Syntax Tree</h2>
+                    <span class="badge">Simplified Structure</span>
+                </div>
+
+                <p class="muted">
+                    Shows the essential operations and operands,
+                    without unnecessary grammar nodes.
+                </p>
+
+                <div class="tree-container" id="astTree">
+                    <div class="empty">
+                        Your AST will appear here.<br>
+                        The simplified syntax tree is generated automatically.
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <section class="card">
+            <h2 class="section-title">Lexical Analysis</h2>
+
+            <p class="muted">
+                The lexer converts the input expression into tokens
+                before parsing begins.
+            </p>
+
+            <div id="tokens" class="token-list">
+                <span class="muted">Tokens will appear here.</span>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2 class="section-title">ASCII Trees</h2>
+
+            <p class="muted">
+                Text-based versions of both trees, drawn with plain characters.
+            </p>
+
+            <div class="tree-grid">
+                <div class="tree-panel">
+                    <h3 class="ascii-title">Parse Tree (ASCII)</h3>
+                    <pre class="ascii-box" id="asciiParse">—</pre>
+                </div>
+
+                <div class="tree-panel">
+                    <h3 class="ascii-title">AST (ASCII)</h3>
+                    <pre class="ascii-box" id="asciiAst">—</pre>
+                </div>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2 class="section-title">Grammar Used</h2>
+
+            <p class="muted">
+                The parser uses a recursive descent technique.
+            </p>
+
+            <div class="grammar">
+                Statement → IDENTIFIER = Expression ; (semicolon optional)<br>
+                Expression → Term { (+ | -) Term }<br>
+                Term → Factor { (* | /) Factor }<br>
+                Factor → NUMBER | IDENTIFIER | ( Expression ) | - Factor
+            </div>
+        </section>
+
+    </main>
+
+    <footer>
+        Parse Tree to AST Generator · Compiler Design Mini Project
+    </footer>
+
+    <script>
+        const expressionInput = document.getElementById("expression");
+
+        function showMessage(text, type) {
+            const message = document.getElementById("message");
+
+            message.textContent = text;
+            message.className = "message " + type;
+            message.style.display = "block";
+        }
+
+        function hideMessage() {
+            const message = document.getElementById("message");
+
+            message.style.display = "none";
+            message.textContent = "";
+        }
+
+        function setExample(expression) {
+            expressionInput.value = expression;
+            generateTrees();
+        }
+
+        function clearAll() {
+            expressionInput.value = "";
+
+            document.getElementById("parseTree").innerHTML =
+                '<div class="empty">Enter an expression to generate the parse tree.</div>';
+
+            document.getElementById("astTree").innerHTML =
+                '<div class="empty">The AST will appear here.</div>';
+
+            document.getElementById("tokens").textContent =
+                "Tokens will appear here.";
+
+            document.getElementById("asciiParse").textContent = "—";
+            document.getElementById("asciiAst").textContent = "—";
+
+            document.getElementById("tokenCount").textContent = "—";
+            document.getElementById("parseCount").textContent = "—";
+            document.getElementById("astCount").textContent = "—";
+
+            hideMessage();
+            expressionInput.focus();
+        }
+
+        // Build a tree using DOM methods and textContent.
+        // This also avoids interpreting node names as HTML.
+
+        function createTreeNode(node, treeType) {
+            const li = document.createElement("li");
+
+            const label = document.createElement("span");
+            label.className = "node";
+
+            const children = Array.isArray(node.children)
+                ? node.children
+                : [];
+
+            if (treeType === "parse") {
+                label.classList.add("parse-node");
+            } else {
+                label.classList.add("ast-node");
+            }
+
+            if (children.length === 0) {
+                label.classList.remove("parse-node");
+                label.classList.remove("ast-node");
+                label.classList.add("leaf-node");
+            }
+
+            label.textContent = node.name;
+            li.appendChild(label);
+
+            if (children.length > 0) {
+                const ul = document.createElement("ul");
+
+                children.forEach(child => {
+                    ul.appendChild(createTreeNode(child, treeType));
+                });
+
+                li.appendChild(ul);
+            }
+
+            return li;
+        }
+
+        function renderTree(containerId, data, treeType) {
+            const container = document.getElementById(containerId);
+
+            container.replaceChildren();
+
+            const tree = document.createElement("div");
+            tree.className = "tree";
+
+            const ul = document.createElement("ul");
+            ul.appendChild(createTreeNode(data, treeType));
+
+            tree.appendChild(ul);
+            container.appendChild(tree);
+        }
+
+        function renderTokens(tokens) {
+            const container = document.getElementById("tokens");
+            container.replaceChildren();
+
+            tokens.forEach(token => {
+                const item = document.createElement("div");
+                item.className = "token";
+
+                const type = document.createElement("small");
+                type.textContent = token.type;
+
+                const value = document.createElement("strong");
+                value.textContent = token.value;
+
+                item.append(type, value);
+                container.appendChild(item);
+            });
+        }
+
+        async function generateTrees() {
+            hideMessage();
+
+            const expression = expressionInput.value.trim();
+
+            if (!expression) {
+                showMessage(
+                    "Please enter an expression first.",
+                    "error"
+                );
+                return;
+            }
+
+            const generateButton = document.querySelector(".primary-btn");
+            generateButton.disabled = true;
+            generateButton.textContent = "Generating...";
+
+            try {
+                const response = await fetch("/parse", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ expression })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(
+                        data.error || "Unable to parse the expression."
+                    );
+                }
+
+                renderTree("parseTree", data.parse_tree, "parse");
+                renderTree("astTree", data.ast, "ast");
+
+                renderTokens(data.tokens);
+
+                // textContent keeps the line breaks and spacing of the ASCII art
+                document.getElementById("asciiParse").textContent =
+                    data.ascii_parse;
+
+                document.getElementById("asciiAst").textContent =
+                    data.ascii_ast;
+
+                document.getElementById("tokenCount").textContent =
+                    data.tokens.length;
+
+                document.getElementById("parseCount").textContent =
+                    data.parse_nodes;
+
+                document.getElementById("astCount").textContent =
+                    data.ast_nodes;
+
+                showMessage(
+                    "Success! The expression is valid and both trees have been generated.",
+                    "success"
+                );
+
+            } catch (error) {
+                showMessage(error.message, "error");
+                document.getElementById("parseTree").innerHTML =
+                    '<div class="empty">No parse tree: fix the expression and try again.</div>';
+                document.getElementById("astTree").innerHTML =
+                    '<div class="empty">No AST: fix the expression and try again.</div>';
+                document.getElementById("tokens").textContent =
+                    "Tokens unavailable because parsing failed.";
+                document.getElementById("asciiParse").textContent = "—";
+                document.getElementById("asciiAst").textContent = "—";
+                document.getElementById("tokenCount").textContent = "—";
+                document.getElementById("parseCount").textContent = "—";
+                document.getElementById("astCount").textContent = "—";
+            } finally {
+                generateButton.disabled = false;
+                generateButton.textContent = "Generate Trees";
+            }
+        }
+
+        expressionInput.addEventListener("keydown", function (event) {
+            if (event.ctrlKey && event.key === "Enter") {
+                generateTrees();
+            }
+        });
+
+        // Generate the default example when the page loads.
+        generateTrees();
+    </script>
+
+</body>
+
+</html>
